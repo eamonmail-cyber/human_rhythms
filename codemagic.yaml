@@ -1,8 +1,7 @@
 workflows:
   android_mvp:
     name: Android MVP
-    # If your app lives in a subfolder, set it here. If NOT, delete this line.
-    working_directory: human_rhythms
+    # If your app lives in a subfolder, set it here. If NOT, delete this lin
     instance_type: mac_mini_m2
     environment:
       flutter: stable
