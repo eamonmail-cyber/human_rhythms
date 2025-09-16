@@ -1,0 +1,33 @@
+workflows:
+  android_mvp:
+    name: Android MVP
+    # If your app lives in a subfolder, set it here. If NOT, delete this line.
+    working_directory: human_rhythms
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Flutter SDK version
+        script: flutter --version
+      - name: Install dependencies
+        script: flutter pub get
+      - name: Generate platform folders (if missing)
+        script: |
+          if [ ! -d "android" ] || [ ! -d "ios" ]; then
+            flutter create .
+          fi
+      - name: Provide google-services.json
+        script: |
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
+            echo "google-services.json written to android/app/"
+          else
+            echo "WARNING: GOOGLE_SERVICES_JSON_B64 not set"
+          fi
+      - name: Build APK (Release)
+        script: flutter build apk --release
+      - name: Build App Bundle (Release)
+        script: flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
