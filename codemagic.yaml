@@ -1,32 +1,104 @@
 workflows:
   android_mvp:
     name: Android MVP
-    # If your app lives in a subfolder, set it here. If NOT, delete this lin
     instance_type: mac_mini_m2
     environment:
       flutter: stable
+      vars:
+        # Optional: more heap for Gradle
+        JAVA_TOOL_OPTIONS: "-Xmx3g"
     scripts:
-      - name: Flutter SDK version
-        script: flutter --version
+      - name: Check working directory + list files
+        script: |
+          pwd
+          ls -la
+          echo "---- Checking pubspec.yaml presence ----"
+          test -f pubspec.yaml && echo "pubspec.yaml found" || (echo "pubspec.yaml NOT found" && exit 1)
+
+      - name: Flutter SDK version / Doctor
+        script: |
+          flutter --version
+          flutter doctor -v
+
       - name: Install dependencies
         script: flutter pub get
-      - name: Generate platform folders (if missing)
+
+      - name: Generate android/ios if missing
         script: |
           if [ ! -d "android" ] || [ ! -d "ios" ]; then
+            echo "android/ or ios/ missing -> running flutter create ."
             flutter create .
+          else
+            echo "android/ and ios/ already exist"
           fi
-      - name: Provide google-services.json
+
+      - name: Tree android directory
+        script: |
+          echo "---- ANDROID TREE ----"
+          ls -la android || true
+          ls -la android/app || true
+
+      - name: Provide google-services.json (if secret present)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "google-services.json written to android/app/"
           else
-            echo "WARNING: GOOGLE_SERVICES_JSON_B64 not set"
+            echo "WARNING: GOOGLE_SERVICES_JSON_B64 not set (build may still succeed, app will just not init Firebase)."
           fi
+          echo "---- Verify google-services.json ----"
+          test -f android/app/google-services.json && head -n 3 android/app/google-services.json || echo "No google-services.json (continuing)"
+
+      # OPTIONAL: If your code uses Firebase packages and you didn't run flutterfire configure in repo,
+      # this patch adds the Google Services plugin to Gradle so release builds don't choke.
+      - name: Patch Gradle for Google Services plugin (safe if already present)
+        script: |
+          # Ensure pluginManagement has google-services plugin declaration (AGP 8+ template)
+          if ! grep -q "com.google.gms.google-services" android/settings.gradle 2>/dev/null; then
+            echo "Patching android/settings.gradle with google-services pluginManagement"
+            awk '1; /pluginManagement\s*{/ && !x {print "  plugins { id(\"com.google.gms.google-services\") version \"4.4.2\" }"; x=1}' android/settings.gradle > /tmp/settings.gradle && mv /tmp/settings.gradle android/settings.gradle
+          else
+            echo "settings.gradle already references com.google.gms.google-services"
+          fi
+
+          # Ensure app/build.gradle applies the plugin
+          if ! grep -q "com.google.gms.google-services" android/app/build.gradle 2>/dev/null; then
+            echo "Applying com.google.gms.google-services plugin in app/build.gradle"
+            # Insert in plugins block if present; otherwise append at top.
+            if grep -q "^plugins\s*{" android/app/build.gradle; then
+              awk '1; /^plugins\s*{/ && !x {print "    id \"com.google.gms.google-services\""; x=1}' android/app/build.gradle > /tmp/app.gradle && mv /tmp/app.gradle android/app/build.gradle
+            else
+              sed -i.bak '1s;^;plugins { id "com.google.gms.google-services" }\n;' android/app/build.gradle
+            fi
+          else
+            echo "app/build.gradle already applies com.google.gms.google-services"
+          fi
+
+          echo "---- SHOW app/build.gradle top ----"
+          head -n 40 android/app/build.gradle || true
+
+      - name: Gradle sanity (list tasks)
+        script: |
+          cd android
+          ./gradlew tasks --no-daemon || true
+          cd -
+
+      - name: Build APK (try Debug first for clearer errors)
+        script: |
+          set -e
+          flutter build apk --debug
+          echo "DEBUG APK build succeeded."
+
       - name: Build APK (Release)
-        script: flutter build apk --release
+        script: |
+          set -e
+          flutter build apk --release
+
       - name: Build App Bundle (Release)
-        script: flutter build appbundle --release
+        script: |
+          set -e
+          flutter build appbundle --release
+
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/*.aab
