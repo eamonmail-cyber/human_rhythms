@@ -24,9 +24,9 @@ class WeeklySummaryScreen extends ConsumerWidget {
     final now = DateTime.now();
     final days = List.generate(7, (i)=> ymd(now.subtract(Duration(days: i)))).reversed.toList();
 
-    final entriesRepo  = ref.watch(entriesRepoProvider);
+    final entriesRepo  = ref.watch(repos.entriesRepoProvider);
     final outcomesRepo = ref.watch(outcomesRepoProvider);
-    final routinesRepo = ref.watch(routinesRepoProvider);
+    final routinesRepo = ref.watch(repos.routinesRepoProvider);
 
     return FutureBuilder(
       future: Future.wait([
