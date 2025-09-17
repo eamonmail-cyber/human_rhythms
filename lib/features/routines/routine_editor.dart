@@ -64,7 +64,7 @@ class _RoutineEditorState extends ConsumerState<RoutineEditor> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(onPressed: () async {
-            final repo = ref.read(routinesRepoProvider);
+            final repo = ref.read(repos.routinesRepoProvider);
             final updated = Routine(
               id: widget.routine.id,
               userId: widget.routine.userId,
