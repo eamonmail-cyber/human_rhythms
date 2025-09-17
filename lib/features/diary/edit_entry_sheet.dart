@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+pos.import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '.../.../data/repositories/repo_providers.dart' as repos;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,7 +64,7 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
           TextField(controller: noteCtrl, maxLength: 240, decoration: const InputDecoration(labelText: "Note / tags")),
           const SizedBox(height: 12),
           ElevatedButton(onPressed: () async {
-            final repo = ref.read(entriesRepoProvider);
+            final repo = ref.read(repos.entriesRepoProvider);
             final id = widget.initial?.id ?? const Uuid().v4();
             final e = Entry(
               id: id,
