@@ -16,7 +16,7 @@ class RoutineListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = ref.watch(userIdProvider);
     if (userId == null) return const SizedBox.shrink();
-    final repo = ref.watch(routinesRepoProvider);
+    final repo = ref.watch(repos.routinesRepoProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text("Routines")),
