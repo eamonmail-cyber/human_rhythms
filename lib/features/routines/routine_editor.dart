@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/routine.dart';
-import '../../data/repositories/routines_repo.dart';
 
 class RoutineEditor extends ConsumerStatefulWidget {
   final Routine routine;
