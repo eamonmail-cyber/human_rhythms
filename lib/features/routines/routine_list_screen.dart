@@ -7,6 +7,9 @@ import '../../data/models/enums.dart';
 import '../../data/models/routine.dart';
 import '../../features/auth/auth_controller.dart';
 import 'routine_editor.dart';
+import '../../data/repositories/entries_repo.dart';
+import '../../data/repositories/outcomes_repo.dart';
+import '../../data/repositories/routines_repo.dart';
 
 class RoutineListScreen extends ConsumerWidget {
   const RoutineListScreen({super.key});
