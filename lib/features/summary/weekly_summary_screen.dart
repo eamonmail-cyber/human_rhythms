@@ -29,7 +29,7 @@ class WeeklySummaryScreen extends ConsumerWidget {
     final routinesRepo = ref.watch(repos.routinesRepoProvider);
 
     return FutureBuilder(
-      future: Future.wait([
+      future: Future.wait<dynamic>([
         entriesRepo.byUserAndDates(userId, days),
         Future.wait(days.map((d)=> outcomesRepo.getForDate(userId, d))),
         routinesRepo.byUser(userId),
