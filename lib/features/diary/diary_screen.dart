@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/repositories/repo.providers.dart' as repos;
+import '../../data/repositories/repo_providers.dart' as repos;
 import 'package:uuid/uuid.dart';
 import '../../core/utils/date.dart';
 import '../../core/widgets/app_scaffold.dart';
@@ -52,12 +52,12 @@ class _DiaryBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final routinesRepo = ref.watch(routinesRepoProvider);
-    final entriesRepo  = ref.watch(entriesRepoProvider);
-    final outcomesRepo = ref.watch(outcomesRepoProvider);
+    final routinesRepo = ref.watch(repos.routinesRepoProvider);
+    final entriesRepo  = ref.watch(repos.entriesRepoProvider);
+    final outcomesRepo = ref.watch(repos.outcomesRepoProvider);
 
     return FutureBuilder(
-      future: Future.wait([
+      future: Future.wait<dynamic>([
         routinesRepo.byUser(userId),
         entriesRepo.byUserAndDate(userId, dateStr),
         outcomesRepo.getForDate(userId, dateStr),
@@ -250,7 +250,7 @@ class _OutcomeBarState extends ConsumerState<_OutcomeBar> {
 
   Future<void> _save(int v) async {
     setState(()=> mood = v);
-    final repo = ref.read(outcomesRepoProvider);
+    final repo = ref.read(repos.outcomesRepoProvider);
     await repo.upsert(Outcome(
       id: "${widget.userId}-${widget.dateStr}",
       userId: widget.userId,
