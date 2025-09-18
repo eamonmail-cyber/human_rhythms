@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +11,18 @@ import '../features/routines/routine_list_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/auth/auth_controller.dart';
 
-GoRouter buildRouter() => GoRouter(
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _sub;
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+      _sub =stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+   @override
+  void dispose();
+   _sub.cancel();
+  super.dispose();
+  }
+}
+  GoRouter buildRouter() => GoRouter(
   refreshListenable: GoRouterRefreshStream(authStateChanges()),
   routes: [
     GoRoute(path: '/', builder: (c, s) => const AuthGate(child: DiaryScreen())),
