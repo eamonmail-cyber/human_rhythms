@@ -15,17 +15,17 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 /// Provider for routines.
 final routinesRepoProvider = Provider<RoutinesRepo>((ref) {
   final db = ref.read(firestoreProvider);
-  return RoutinesRepo(db); // or just RoutinesRepo() if your constructor takes no args
+  return RoutinesRepo(); // or just RoutinesRepo(db) if your constructor takes no args
 });
 
 /// Provider for diary entries.
 final entriesRepoProvider = Provider<EntriesRepo>((ref) {
   final db = ref.read(firestoreProvider);
-  return EntriesRepo(db);
+  return EntriesRepo();
 });
 
 /// Provider for outcomes.
 final outcomesRepoProvider = Provider<OutcomesRepo>((ref) {
   final db = ref.read(firestoreProvider);
-  return OutcomesRepo(db);
+  return OutcomesRepo();
 });
