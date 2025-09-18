@@ -1,4 +1,4 @@
-os.import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/repo_providers.dart' as repos;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
