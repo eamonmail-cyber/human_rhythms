@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+os.import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/repo_providers.dart' as repos;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +25,7 @@ class WeeklySummaryScreen extends ConsumerWidget {
     final days = List.generate(7, (i)=> ymd(now.subtract(Duration(days: i)))).reversed.toList();
 
     final entriesRepo  = ref.watch(repos.entriesRepoProvider);
-    final outcomesRepo = ref.watch(outcomesRepoProvider);
+    final outcomesRepo = ref.watch(repos.outcomesRepoProvider);
     final routinesRepo = ref.watch(repos.routinesRepoProvider);
 
     return FutureBuilder(
