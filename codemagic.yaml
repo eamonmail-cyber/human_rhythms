@@ -22,19 +22,20 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      # NEW: force-generate Android/iOS if missing (more reliable than 'flutter create .')
-      - name: Ensure android/ios exist (force recreate if missing)
+      # FORCE a full Android *app* template so android/app/build.gradle exists
+      - name: Ensure android/ios exist (force recreate as full app)
         script: |
-          if [ ! -d "android" ]; then
-            echo "No android/ folder -> generating"
-            flutter create --platforms=android .
+          if [ ! -d "android/app" ]; then
+            echo "No android/app folder -> generating full app template"
+            rm -rf android
+            flutter create --platforms=android --template=app .
           else
-            echo "android/ already exists"
+            echo "android/app already exists"
           fi
 
           if [ ! -d "ios" ]; then
             echo "No ios/ folder -> generating"
-            flutter create --platforms=ios .
+            flutter create --platforms=ios --template=app .
           else
             echo "ios/ already exists"
           fi
@@ -106,3 +107,4 @@ workflows:
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+
