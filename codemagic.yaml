@@ -1,6 +1,6 @@
 workflows:
   android_mvp:
-    name: Android MVP
+    name: Android MVP (no gradle patch)
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -22,89 +22,54 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      # FORCE a full Android *app* template so android/app/build.gradle exists
-      - name: Ensure android/ios exist (force recreate as full app)
+      # Try normal create first; if app scaffold still missing, force-create as app
+      - name: Ensure Android/iOS scaffolds
         script: |
-          if [ ! -d "android/app" ]; then
-            echo "No android/app folder -> generating full app template"
+          echo "Attempt 1: flutter create ."
+          flutter create . || true
+
+          if [ ! -f android/app/build.gradle ]; then
+            echo "android/app/build.gradle still missing -> force app template"
             rm -rf android
             flutter create --platforms=android --template=app .
-          else
-            echo "android/app already exists"
           fi
 
-          if [ ! -d "ios" ]; then
-            echo "No ios/ folder -> generating"
+          if [ ! -d ios ]; then
+            echo "iOS missing -> create"
             flutter create --platforms=ios --template=app .
-          else
-            echo "ios/ already exists"
           fi
 
-          echo "--- android folder tree ---"
+          echo "--- ANDROID TREE ---"
           ls -R android || true
 
-      - name: Add INTERNET permission
+      - name: Add INTERNET permission (best effort)
         script: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
           if [ -f "$MANIFEST" ]; then
             if ! grep -q 'uses-permission android:name="android.permission.INTERNET"' "$MANIFEST"; then
-              sed -i.bak 's|<application|<uses-permission android:name="android.permission.INTERNET" />\n    <application|' "$MANIFEST"
+              sed -i.bak 's|<application|<uses-permission android:name="android.permission.INTERNET" />\n    <application|' "$MANIFEST" || true
               echo "Injected INTERNET permission."
             else
               echo "INTERNET permission already present."
             fi
           else
-            echo "WARN: $MANIFEST missing?"
-            ls -R android || true
+            echo "WARN: AndroidManifest not found (will continue)."
           fi
 
-      - name: Provide google-services.json (from secret)
+      - name: Provide google-services.json (optional)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "google-services.json written to android/app/"
-            head -n 5 android/app/google-services.json || true
+            head -n 3 android/app/google-services.json || true
           else
             echo "No GOOGLE_SERVICES_JSON_B64 provided; skipping Firebase file."
           fi
 
-      - name: Patch app/build.gradle (version bump + SDK; no .dev suffix)
-        script: |
-          APP=android/app/build.gradle
-          if [ ! -f "$APP" ]; then
-            echo "ERROR: $APP not found"
-            echo "--- android tree just before patch ---"
-            ls -R android || true
-            exit 1
-          fi
-
-          # Bump versionCode/versionName so installs never downgrade
-          VC=$(date +%s | cut -c1-10)
-          if grep -q "versionCode" "$APP"; then
-            sed -i.bak 's/versionCode[[:space:]]\+[0-9][0-9]*/versionCode '"$VC"'/g' "$APP"
-          else
-            echo "Inserting versionCode/versionName into defaultConfig..."
-            awk '
-              /defaultConfig[[:space:]]*{/ && !x {
-                print; print "        versionCode '"$VC"'"; print "        versionName \"0.0.'"$VC"'\""; x=1; next
-              }
-              {print}
-            ' "$APP" > /tmp/app.gradle && mv /tmp/app.gradle "$APP"
-          fi
-          sed -i.bak 's/versionName[[:space:]]\+"[^"]\+"/versionName "0.0.'"$VC"'"/g' "$APP" || true
-
-          # Ensure min/target SDK sane
-          sed -i.bak 's/minSdkVersion[[:space:]]\+[0-9][0-9]*/minSdkVersion 21/g' "$APP" || true
-          sed -i.bak 's/targetSdkVersion[[:space:]]\+[0-9][0-9]*/targetSdkVersion 34/g' "$APP" || true
-
-          echo "---- TOP of $APP ----"
-          head -n 80 "$APP" || true
-
-      - name: Build Debug APK (universal)
+      - name: Build Debug APK
         script: |
           flutter clean
           flutter build apk --debug
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-
