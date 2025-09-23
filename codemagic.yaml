@@ -22,16 +22,27 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Ensure android/ios exist
+      # NEW: force-generate Android/iOS if missing (more reliable than 'flutter create .')
+      - name: Ensure android/ios exist (force recreate if missing)
         script: |
-          if [ ! -d "android" ] || [ ! -d "ios" ]; then
-            echo "android/ or ios/ missing -> flutter create ."
-            flutter create .
+          if [ ! -d "android" ]; then
+            echo "No android/ folder -> generating"
+            flutter create --platforms=android .
           else
-            echo "android/ and ios/ already present"
+            echo "android/ already exists"
           fi
-          
-      - name: Add INTERNET permission (idempotent)
+
+          if [ ! -d "ios" ]; then
+            echo "No ios/ folder -> generating"
+            flutter create --platforms=ios .
+          else
+            echo "ios/ already exists"
+          fi
+
+          echo "--- android folder tree ---"
+          ls -R android || true
+
+      - name: Add INTERNET permission
         script: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
           if [ -f "$MANIFEST" ]; then
@@ -43,6 +54,7 @@ workflows:
             fi
           else
             echo "WARN: $MANIFEST missing?"
+            ls -R android || true
           fi
 
       - name: Provide google-services.json (from secret)
@@ -50,48 +62,47 @@ workflows:
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "google-services.json written to android/app/"
-            head -n 3 android/app/google-services.json || true
+            head -n 5 android/app/google-services.json || true
           else
-            echo "WARNING: GOOGLE_SERVICES_JSON_B64 not set (Firebase may not init)."
+            echo "No GOOGLE_SERVICES_JSON_B64 provided; skipping Firebase file."
           fi
 
       - name: Patch app/build.gradle (version bump + SDK; no .dev suffix)
         script: |
           APP=android/app/build.gradle
-          test -f "$APP" || { echo "Missing $APP"; exit 1; }
+          if [ ! -f "$APP" ]; then
+            echo "ERROR: $APP not found"
+            echo "--- android tree just before patch ---"
+            ls -R android || true
+            exit 1
+          fi
 
           # Bump versionCode/versionName so installs never downgrade
           VC=$(date +%s | cut -c1-10)
           if grep -q "versionCode" "$APP"; then
             sed -i.bak 's/versionCode[[:space:]]\+[0-9][0-9]*/versionCode '"$VC"'/g' "$APP"
           else
+            echo "Inserting versionCode/versionName into defaultConfig..."
             awk '
-              /defaultConfig[[:space:]]*{/ && !x {print; print "        versionCode '"$VC"'"; print "        versionName \"0.0.'"$VC"'\""; x=1; next}
+              /defaultConfig[[:space:]]*{/ && !x {
+                print; print "        versionCode '"$VC"'"; print "        versionName \"0.0.'"$VC"'\""; x=1; next
+              }
               {print}
             ' "$APP" > /tmp/app.gradle && mv /tmp/app.gradle "$APP"
           fi
-          sed -i.bak 's/versionName[[:space:]]\+"[^"]\+"/versionName "0.0.'"$VC"'"/g' "$APP"
+          sed -i.bak 's/versionName[[:space:]]\+"[^"]\+"/versionName "0.0.'"$VC"'"/g' "$APP" || true
 
           # Ensure min/target SDK sane
-          sed -i.bak 's/minSdkVersion[[:space:]]\+[0-9][0-9]*/minSdkVersion 21/g' "$APP"
-          sed -i.bak 's/targetSdkVersion[[:space:]]\+[0-9][0-9]*/targetSdkVersion 34/g' "$APP"
+          sed -i.bak 's/minSdkVersion[[:space:]]\+[0-9][0-9]*/minSdkVersion 21/g' "$APP" || true
+          sed -i.bak 's/targetSdkVersion[[:space:]]\+[0-9][0-9]*/targetSdkVersion 34/g' "$APP" || true
 
-          echo "Top of app/build.gradle:"
-          head -n 60 "$APP" || true
+          echo "---- TOP of $APP ----"
+          head -n 80 "$APP" || true
 
-      - name: Build Debug APK
+      - name: Build Debug APK (universal)
         script: |
           flutter clean
           flutter build apk --debug
 
-      - name: Build Release APK
-        script: |
-          flutter build apk --release
-
-      - name: Build App Bundle (Release)
-        script: |
-          flutter build appbundle --release
-
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/bundle/release/*.aab
