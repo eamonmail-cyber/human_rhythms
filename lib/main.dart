@@ -1,45 +1,71 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:go_router/go_router.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: _Baseline(),
-  ));
-}
 
-class _Baseline extends StatefulWidget {
-  const _Baseline({super.key});
-   @override
-  State<_Baseline> createState() => _BaselineState();
-}
+  String? initError;
+  bool firebaseReady = false;
 
-class _BaselineState extends State<_Baseline> {
-  final _events = <String>['App started'];
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => setState(() => _events.add('UI mounted')));
+  try {
+    if (Platform.isAndroid) {
+      // Uses google-services.json from android/app/
+      await Firebase.initializeApp();
+      firebaseReady = true;
+    } else {
+      firebaseReady = false; // other platforms skipped for now
+    }
+  } catch (e) {
+    initError = e.toString();
   }
+
+  runApp(App(initError: initError, firebaseReady: firebaseReady));
+}
+
+class App extends StatelessWidget {
+  final String? initError;
+  final bool firebaseReady;
+  App({super.key, this.initError, required this.firebaseReady});
+
+  final _router = GoRouter(
+    initialLocation: '/',
+    routes: [ GoRoute(path: '/', builder: (_, __) => const HomeScreen()) ],
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Human Rhythms — Baseline')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text('If you see this, rendering is OK.'),
-          const SizedBox(height: 12),
-          for (final e in _events.reversed) Text('• $e'),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => setState(() => _events.add('Tapped @ ${DateTime.now()}')),
-            child: const Text('Tap test'),
-          ),
-        ],
-      ),
+    if (initError != null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          appBar: AppBar(title: const Text('Init error')),
+          body: Center(child: Text(initError!, textAlign: TextAlign.center)),
+        ),
+      );
+    }
+    if (!firebaseReady) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(child: Text('Firebase skipped (non-Android or missing JSON)')),
+        ),
+      );
+    }
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      routerConfig: _router,
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: Text('Firebase OK + Router OK')),
     );
   }
 }
