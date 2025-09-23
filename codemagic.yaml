@@ -1,6 +1,6 @@
 workflows:
-  android_debug:
-    name: Android Debug (always-installable)
+  android_mvp:
+    name: Android MVP
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -45,37 +45,26 @@ workflows:
             echo "WARN: $MANIFEST missing?"
           fi
 
-      - name: (Optional) Provide google-services.json for Firebase
+      - name: Provide google-services.json (from secret)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
-            echo "google-services.json written."
-            # ensure Google Services plugin is declared (safe if duplicated)
-            if ! grep -q "com.google.gms.google-services" android/settings.gradle 2>/dev/null; then
-              awk '1;/pluginManagement[[:space:]]*{/ && !x {print "    plugins { id(\"com.google.gms.google-services\") version \"4.4.2\" }"; x=1}' android/settings.gradle > /tmp/settings.gradle && mv /tmp/settings.gradle android/settings.gradle
-            fi
-            if ! grep -q "com.google.gms.google-services" android/app/build.gradle 2>/dev/null; then
-              if grep -q "^plugins[[:space:]]*{" android/app/build.gradle; then
-                awk '1;/^plugins[[:space:]]*{/ && !x {print "    id \"com.google.gms.google-services\""; x=1}' android/app/build.gradle > /tmp/app.gradle && mv /tmp/app.gradle android/app/build.gradle
-              else
-                sed -i.bak '1s;^;plugins { id "com.google.gms.google-services" }\n;' android/app/build.gradle
-              fi
-            fi
+            echo "google-services.json written to android/app/"
+            head -n 3 android/app/google-services.json || true
           else
-            echo "No GOOGLE_SERVICES_JSON_B64 provided; skipping Firebase file."
+            echo "WARNING: GOOGLE_SERVICES_JSON_B64 not set (Firebase may not init)."
           fi
 
-      - name: Patch app/build.gradle for easy install (idempotent)
+      - name: Patch app/build.gradle (version bump + SDK; no .dev suffix)
         script: |
           APP=android/app/build.gradle
-          test -f "$APP" || (echo "Missing $APP"; cat android || true; exit 1)
+          test -f "$APP" || { echo "Missing $APP"; exit 1; }
 
-          # 1) Bump versionCode/versionName to avoid 'downgrade/ungraded'
+          # Bump versionCode/versionName so installs never downgrade
           VC=$(date +%s | cut -c1-10)
           if grep -q "versionCode" "$APP"; then
             sed -i.bak 's/versionCode[[:space:]]\+[0-9][0-9]*/versionCode '"$VC"'/g' "$APP"
           else
-            # Insert inside defaultConfig { ... }
             awk '
               /defaultConfig[[:space:]]*{/ && !x {print; print "        versionCode '"$VC"'"; print "        versionName \"0.0.'"$VC"'\""; x=1; next}
               {print}
@@ -83,35 +72,26 @@ workflows:
           fi
           sed -i.bak 's/versionName[[:space:]]\+"[^"]\+"/versionName "0.0.'"$VC"'"/g' "$APP"
 
-          # 2) Ensure min/target SDK sane (min 21, target 34)
+          # Ensure min/target SDK sane
           sed -i.bak 's/minSdkVersion[[:space:]]\+[0-9][0-9]*/minSdkVersion 21/g' "$APP"
           sed -i.bak 's/targetSdkVersion[[:space:]]\+[0-9][0-9]*/targetSdkVersion 34/g' "$APP"
 
-          # 3) Add debug-only suffix so APK installs as a separate app (no conflicts)
-          if ! grep -q 'applicationIdSuffix ".dev"' "$APP"; then
-            if grep -q "buildTypes[[:space:]]*{" "$APP"; then
-              awk '
-                BEGIN{done=0}
-                /buildTypes[[:space:]]*{/ && !done {print; print "        debug {"; print "            applicationIdSuffix \".dev\""; print "            versionNameSuffix \"-dev\""; print "        }"; done=1; next}
-                {print}
-              ' "$APP" > /tmp/app.gradle && mv /tmp/app.gradle "$APP"
-            else
-              # create buildTypes with debug block inside android { ... }
-              awk '
-                BEGIN{done=0}
-                /android[[:space:]]*{/ && !done {print; print "    buildTypes {"; print "        debug {"; print "            applicationIdSuffix \".dev\""; print "            versionNameSuffix \"-dev\""; print "        }"; print "    }"; done=1; next}
-                {print}
-              ' "$APP" > /tmp/app.gradle && mv /tmp/app.gradle "$APP"
-            fi
-          fi
+          echo "Top of app/build.gradle:"
+          head -n 60 "$APP" || true
 
-          echo "---- app/build.gradle (top) ----"
-          head -n 80 "$APP" || true
-
-      - name: Build Debug APK (universal)
+      - name: Build Debug APK
         script: |
           flutter clean
           flutter build apk --debug
 
+      - name: Build Release APK
+        script: |
+          flutter build apk --release
+
+      - name: Build App Bundle (Release)
+        script: |
+          flutter build appbundle --release
+
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
