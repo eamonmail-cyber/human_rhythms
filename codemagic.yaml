@@ -1,6 +1,6 @@
 workflows:
   android_mvp:
-    name: Android MVP (no gradle patch)
+    name: Android MVP (no gradle patch; code-based Firebase config)
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -22,27 +22,18 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      # Try normal create first; if app scaffold still missing, force-create as app
-      - name: Ensure Android/iOS scaffolds
+      - name: Ensure Android/iOS scaffolds (best effort)
         script: |
-          echo "Attempt 1: flutter create ."
           flutter create . || true
-
-          if [ ! -f android/app/build.gradle ]; then
-            echo "android/app/build.gradle still missing -> force app template"
+          if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
+            echo "android/app Gradle file still missing -> force app template"
             rm -rf android
             flutter create --platforms=android --template=app .
           fi
+          [ -d ios ] || flutter create --platforms=ios --template=app .
+          echo "--- ANDROID TREE ---"; ls -R android || true
 
-          if [ ! -d ios ]; then
-            echo "iOS missing -> create"
-            flutter create --platforms=ios --template=app .
-          fi
-
-          echo "--- ANDROID TREE ---"
-          ls -R android || true
-
-      - name: Add INTERNET permission (best effort)
+      - name: Add INTERNET permission (idempotent)
         script: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
           if [ -f "$MANIFEST" ]; then
@@ -53,17 +44,54 @@ workflows:
               echo "INTERNET permission already present."
             fi
           else
-            echo "WARN: AndroidManifest not found (will continue)."
+            echo "WARN: $MANIFEST missing? continuing…"
           fi
 
-      - name: Provide google-services.json (optional)
+      - name: Provide google-services.json (from secret, optional)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "google-services.json written to android/app/"
             head -n 3 android/app/google-services.json || true
           else
-            echo "No GOOGLE_SERVICES_JSON_B64 provided; skipping Firebase file."
+            echo "No GOOGLE_SERVICES_JSON_B64; Firebase code will still run but use fallback."
+          fi
+
+      - name: Generate lib/firebase_options.dart from google-services.json (no Gradle plugin needed)
+        script: |
+          if [ -f android/app/google-services.json ]; then
+            python3 - <<'PY'
+import json, os
+p="android/app/google-services.json"
+d=json.load(open(p))
+pi=d.get('project_info',{})
+project_id=pi.get('project_id','')
+project_number=pi.get('project_number','')
+storage_bucket=pi.get('storage_bucket','')
+client=(d.get('client') or [{}])[0]
+app_id=client.get('client_info',{}).get('mobilesdk_app_id','')
+api_key=(client.get('api_key') or [{}])[0].get('current_key','')
+
+dart=f"""// GENERATED: created from google-services.json by CI
+import 'package:firebase_core/firebase_core.dart';
+
+class DefaultFirebaseOptions {{
+  static FirebaseOptions get currentPlatform => const FirebaseOptions(
+    apiKey: '{api_key}',
+    appId: '{app_id}',
+    messagingSenderId: '{project_number}',
+    projectId: '{project_id}',
+    storageBucket: '{storage_bucket}',
+  );
+}}
+"""
+os.makedirs('lib', exist_ok=True)
+open('lib/firebase_options.dart','w').write(dart)
+print("Wrote lib/firebase_options.dart")
+PY
+            head -n 20 lib/firebase_options.dart || true
+          else
+            echo "No google-services.json found; skipping firebase_options.dart generation."
           fi
 
       - name: Build Debug APK
