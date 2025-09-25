@@ -1,6 +1,10 @@
-workflows:
+
+
+      
+
+      workflows:
   android_mvp:
-    name: Android MVP (no gradle patch; code-based Firebase config)
+    name: Android MVP (self-healing Android + code-based Firebase)
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -22,16 +26,132 @@ workflows:
       - name: Get packages
         script: flutter pub get
 
-      - name: Ensure Android/iOS scaffolds (best effort)
+      - name: Ensure Android/iOS scaffolds (and self-heal Gradle files if missing)
         script: |
+          # Try normal create
           flutter create . || true
+
+          # Force full app template if Gradle file still missing
           if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
-            echo "android/app Gradle file still missing -> force app template"
+            echo "android/app/build.gradle missing -> force-create Android app template"
             rm -rf android
             flutter create --platforms=android --template=app .
           fi
+
+          # If app/build.gradle is STILL missing, write minimal Gradle files
+          if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
+            echo "Still missing app Gradle -> writing minimal Gradle files"
+
+            mkdir -p android/app/src/main
+            cat > android/app/build.gradle <<'GRADLE_APP'
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+android {
+    namespace "com.example.human_rhythms"
+    compileSdkVersion 34
+
+    defaultConfig {
+        applicationId "com.example.human_rhythms"
+        minSdkVersion 21
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.2.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+}
+GRADLE_APP
+
+            # Project-level build.gradle
+            mkdir -p android
+            cat > android/build.gradle <<'GRADLE_PROJ'
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.google.gms:google-services:4.4.2'
+    }
+}
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+GRADLE_PROJ
+
+            # settings.gradle
+            cat > android/settings.gradle <<'SETTINGS'
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+include ':app'
+SETTINGS
+
+            # Minimal AndroidManifest if missing
+            if [ ! -f android/app/src/main/AndroidManifest.xml ]; then
+              cat > android/app/src/main/AndroidManifest.xml <<'MANIFEST'
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.human_rhythms">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application
+        android:label="human_rhythms"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <meta-data android:name="flutterEmbedding" android:value="2"/>
+    </application>
+</manifest>
+MANIFEST
+            fi
+          fi
+
           [ -d ios ] || flutter create --platforms=ios --template=app .
-          echo "--- ANDROID TREE ---"; ls -R android || true
+
+          echo "--- ANDROID TREE ---"
+          ls -R android || true
 
       - name: Add INTERNET permission (idempotent)
         script: |
@@ -40,52 +160,48 @@ workflows:
             if ! grep -q 'uses-permission android:name="android.permission.INTERNET"' "$MANIFEST"; then
               sed -i.bak 's|<application|<uses-permission android:name="android.permission.INTERNET" />\n    <application|' "$MANIFEST" || true
               echo "Injected INTERNET permission."
-            else
-              echo "INTERNET permission already present."
             fi
-          else
-            echo "WARN: $MANIFEST missing? continuing…"
           fi
 
-      - name: Provide google-services.json (from secret, optional)
+      - name: Provide google-services.json (optional)
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
             echo "google-services.json written to android/app/"
             head -n 3 android/app/google-services.json || true
           else
-            echo "No GOOGLE_SERVICES_JSON_B64; Firebase code will still run but use fallback."
+            echo "No GOOGLE_SERVICES_JSON_B64 provided; Firebase will still init from code if options file exists."
           fi
 
       - name: Generate lib/firebase_options.dart (safe inline python)
         script: |
           if [ -f android/app/google-services.json ]; then
             python3 -c "
-          import json, os
-            d=json.load(open('android/app/google-services.json'))
-          pi=d.get('project_info',{})
-          project_id=pi.get('project_id','')
-          project_number=pi.get('project_number','')
-          storage_bucket=pi.get('storage_bucket','')
-          client=(d.get('client') or [{}])[0]
-          app_id=client.get('client_info',{}).get('mobilesdk_app_id','')
-          api_key=(client.get('api_key') or [{}])[0].get('current_key','')
-          dart=f'''// GENERATED: created from google-services.json by CI
+        import json, os
+        d=json.load(open('android/app/google-services.json'))
+        pi=d.get('project_info',{})
+        project_id=pi.get('project_id','')
+        project_number=pi.get('project_number','')
+        storage_bucket=pi.get('storage_bucket','')
+        client=(d.get('client') or [{}])[0]
+        app_id=client.get('client_info',{}).get('mobilesdk_app_id','')
+        api_key=(client.get('api_key') or [{}])[0].get('current_key','')
+          dart=f'''// GENERATED: from google-services.json by CI
           import 'package:firebase_core/firebase_core.dart';
-          class DefaultFirebaseOptions {{
-          static FirebaseOptions get currentPlatform => const FirebaseOptions(
-          apiKey: '{api_key}',
-          appId: '{app_id}',
-          messagingSenderId: '{project_number}',
-          projectId: '{project_id}',
-          storageBucket: '{storage_bucket}',
-          );
-          }}
-          '''
-          os.makedirs('lib', exist_ok=True)
-          open('lib/firebase_options.dart','w').write(dart)
-              print('Wrote lib/firebase_options.dart')
-          "
+                class DefaultFirebaseOptions {{
+        static FirebaseOptions get currentPlatform => const FirebaseOptions(
+    apiKey: '{api_key}',
+    appId: '{app_id}',
+    messagingSenderId: '{project_number}',
+    projectId: '{project_id}',
+    storageBucket: '{storage_bucket}',
+    );
+    }}
+    '''
+    os.makedirs('lib', exist_ok=True)
+    open('lib/firebase_options.dart','w').write(dart)
+    print('Wrote lib/firebase_options.dart')
+    "
             head -n 20 lib/firebase_options.dart || true
           else
             echo "No google-services.json found; skipping firebase_options.dart generation."
