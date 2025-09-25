@@ -61,31 +61,31 @@ workflows:
         script: |
           if [ -f android/app/google-services.json ]; then
             python3 -c "
-        import json, os
+          import json, os
             d=json.load(open('android/app/google-services.json'))
-        pi=d.get('project_info',{})
-        project_id=pi.get('project_id','')
-        project_number=pi.get('project_number','')
-        storage_bucket=pi.get('storage_bucket','')
-        client=(d.get('client') or [{}])[0]
-        app_id=client.get('client_info',{}).get('mobilesdk_app_id','')
-        api_key=(client.get('api_key') or [{}])[0].get('current_key','')
-        dart=f'''// GENERATED: created from google-services.json by CI
-        import 'package:firebase_core/firebase_core.dart';
+          pi=d.get('project_info',{})
+          project_id=pi.get('project_id','')
+          project_number=pi.get('project_number','')
+          storage_bucket=pi.get('storage_bucket','')
+          client=(d.get('client') or [{}])[0]
+          app_id=client.get('client_info',{}).get('mobilesdk_app_id','')
+          api_key=(client.get('api_key') or [{}])[0].get('current_key','')
+          dart=f'''// GENERATED: created from google-services.json by CI
+          import 'package:firebase_core/firebase_core.dart';
           class DefaultFirebaseOptions {{
-      static FirebaseOptions get currentPlatform => const FirebaseOptions(
-    apiKey: '{api_key}',
-    appId: '{app_id}',
-    messagingSenderId: '{project_number}',
-    projectId: '{project_id}',
-    storageBucket: '{storage_bucket}',
-    );
-    }}
-    '''
-    os.makedirs('lib', exist_ok=True)
-    open('lib/firebase_options.dart','w').write(dart)
-    print('Wrote lib/firebase_options.dart')
-    "
+          static FirebaseOptions get currentPlatform => const FirebaseOptions(
+        apiKey: '{api_key}',
+        appId: '{app_id}',
+        messagingSenderId: '{project_number}',
+        projectId: '{project_id}',
+        storageBucket: '{storage_bucket}',
+        );
+        }}
+        '''
+        os.makedirs('lib', exist_ok=True)
+        open('lib/firebase_options.dart','w').write(dart)
+        print('Wrote lib/firebase_options.dart')
+        "
             head -n 20 lib/firebase_options.dart || true
           else
             echo "No google-services.json found; skipping firebase_options.dart generation."
