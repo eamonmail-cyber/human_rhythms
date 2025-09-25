@@ -74,18 +74,18 @@ workflows:
           import 'package:firebase_core/firebase_core.dart';
           class DefaultFirebaseOptions {{
           static FirebaseOptions get currentPlatform => const FirebaseOptions(
-        apiKey: '{api_key}',
-        appId: '{app_id}',
-        messagingSenderId: '{project_number}',
-        projectId: '{project_id}',
-        storageBucket: '{storage_bucket}',
-        );
-        }}
-        '''
-        os.makedirs('lib', exist_ok=True)
-        open('lib/firebase_options.dart','w').write(dart)
-        print('Wrote lib/firebase_options.dart')
-        "
+          apiKey: '{api_key}',
+          appId: '{app_id}',
+          messagingSenderId: '{project_number}',
+          projectId: '{project_id}',
+          storageBucket: '{storage_bucket}',
+          );
+          }}
+          '''
+          os.makedirs('lib', exist_ok=True)
+          open('lib/firebase_options.dart','w').write(dart)
+              print('Wrote lib/firebase_options.dart')
+          "
             head -n 20 lib/firebase_options.dart || true
           else
             echo "No google-services.json found; skipping firebase_options.dart generation."
