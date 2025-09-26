@@ -1,75 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart'; // generated during build
 import 'package:go_router/go_router.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(App());
+
+  String? initError;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    initError = e.toString();
+  }
+
+  runApp(App(initError: initError));
 }
 
 class App extends StatelessWidget {
-  App({super.key});
+  final String? initError;
+  App({super.key, this.initError});
 
   final _router = GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, __) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/details',
-        builder: (_, __) => const DetailsScreen(),
-      ),
+      GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/details', builder: (_, __) => const DetailsScreen()),
+      GoRoute(path: '/firestore', builder: (_, __) => const FirestoreDemo()),
     ],
   );
 
   @override
   Widget build(BuildContext context) {
+    if (initError != null) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text('Firebase init failed:\n$initError')),
+        ),
+      );
+    }
     return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
       routerConfig: _router,
-      theme: ThemeData(useMaterial3: true),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int taps = 0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Human Rhythms')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Router OK. This is your Home screen.',
-              style: TextStyle(fontSize: 16),
-            ),
+            const Text('Firebase OK + Router OK'),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => setState(() => taps++),
-              child: Text('Tap counter: $taps'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
+            ElevatedButton(
               onPressed: () => context.go('/details'),
               child: const Text('Go to Details'),
             ),
-            const Spacer(),
-            const Text(
-              'Next: we can re-add Firebase safely after this runs.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.go('/firestore'),
+              child: const Text('Try Firestore Demo'),
             ),
           ],
         ),
@@ -84,8 +82,67 @@ class DetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Details')),
-      body: const Center(
-        child: Text('Second screen — navigation working 👍'),
+      body: const Center(child: Text('This is the details screen.')),
+    );
+  }
+}
+
+/// 🔥 Firestore Demo Screen
+class FirestoreDemo extends StatefulWidget {
+  const FirestoreDemo({super.key});
+  @override
+  State<FirestoreDemo> createState() => _FirestoreDemoState();
+}
+
+class _FirestoreDemoState extends State<FirestoreDemo> {
+  final _controller = TextEditingController();
+  final _messages = <String>[];
+
+  Future<void> _saveMessage() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('demo_messages').add({
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    setState(() {
+      _messages.add(text);
+      _controller.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Firestore Demo')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _controller,
+              decoration: const InputDecoration(
+                labelText: 'Enter a message',
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _saveMessage,
+              child: const Text('Save to Firestore'),
+            ),
+            const Divider(height: 32),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _messages.length,
+                itemBuilder: (_, i) => ListTile(
+                  title: Text(_messages[i]),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
