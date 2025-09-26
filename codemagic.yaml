@@ -1,35 +1,26 @@
 workflows:
-  android_mvp:
+  android-mvp:
     name: Android MVP
-    instance_type: mac_mini_m2
+    max_build_duration: 60
     environment:
       flutter: stable
-
+      xcode: latest
+      android:
+        image: latest
+      groups:
+        - google_credentials
     scripts:
-      - name: Prepare Android project (fresh scaffold)
-        script: |
-          set -e
-          flutter --version
-          rm -rf android
-          flutter create --platforms=android --template=app .
-          echo "---- ANDROID TREE (top) ----"
-          ls -la android
-          echo "---- ANDROID APP (top) ----"
-          ls -la android/app
-
-      - name: Get packages
+      - name: Install dependencies
         script: |
           flutter pub get
 
-      - name: Provide google-services.json (optional)
+      - name: Flutter analyze
         script: |
-          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
-            echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
-            echo "google-services.json written to android/app/"
-            head -n 3 android/app/google-services.json || true
-          else
-            echo "No GOOGLE_SERVICES_JSON_B64 set; continuing."
-          fi
+          flutter analyze
+
+      - name: Flutter test
+        script: |
+          flutter test
 
       - name: Generate lib/firebase_options.dart (from JSON or fallback)
         script: |
@@ -84,14 +75,19 @@ class DefaultFirebaseOptions {
 }
 DART
           fi
-          echo "Preview:"
+          echo "Preview of generated lib/firebase_options.dart:"
           head -n 20 lib/firebase_options.dart || true
 
       - name: Build Debug APK
         script: |
-          set -e
-          flutter clean
           flutter build apk --debug
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - $OWNER_EMAIL
