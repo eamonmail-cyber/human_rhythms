@@ -1,26 +1,39 @@
 workflows:
-  android-mvp:
+  android_mvp:
     name: Android MVP
     environment:
       flutter: stable
+
     scripts:
       - name: Install dependencies
         script: flutter pub get
 
-      - name: Provide google-services.json (optional)
+      - name: Provide google-services.json (from env var)
         script: |
+          set -e
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            mkdir -p android/app
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
-            echo "google-services.json written to android/app/"
+            echo "✅ Restored android/app/google-services.json"
+            head -n 3 android/app/google-services.json || true
           else
-            echo "No GOOGLE_SERVICES_JSON_B64 set; build may still run with dummy values."
+            echo "❌ GOOGLE_SERVICES_JSON_B64 not set in Codemagic Environment variables"
+            exit 1
           fi
 
       - name: Generate firebase_options.dart
-        script: python3 scripts/gen_firebase_options.py
+        script: |
+          set -e
+          python3 scripts/gen_firebase_options.py
+          test -f lib/main/script/firebase_options.dart || (echo "❌ lib/main/script/firebase_options.dart not generated" && exit 1)
+          echo "✅ Generated lib/main/script/firebase_options.dart"
+          head -n 12 lib/main/script/firebase_options.dart || true
 
       - name: Build Debug APK
-        script: flutter build apk --debug
+        script: |
+          set -e
+          flutter clean
+          flutter build apk --debug
 
     artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/*.apk
