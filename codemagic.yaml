@@ -1,28 +1,26 @@
 workflows:
-  android_mvp:
+  android-mvp:
     name: Android MVP
-    instance_type: mac_mini_m2
     environment:
       flutter: stable
-
     scripts:
-      - name: Prepare Android project (fresh scaffold)
-        script: |
-          set -e
-          flutter --version
-          rm -rf android
-          flutter create --platforms=android --template=app .
-          ls -la android && ls -la android/app
+      - name: Install dependencies
+        script: flutter pub get
 
-      - name: Get packages
+      - name: Provide google-services.json (optional)
         script: |
-          flutter pub get
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
+            echo "google-services.json written to android/app/"
+          else
+            echo "No GOOGLE_SERVICES_JSON_B64 set; build may still run with dummy values."
+          fi
+
+      - name: Generate firebase_options.dart
+        script: python3 scripts/gen_firebase_options.py
 
       - name: Build Debug APK
-        script: |
-          set -e
-          flutter clean
-          flutter build apk --debug
+        script: flutter build apk --debug
 
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/app-debug.apk
