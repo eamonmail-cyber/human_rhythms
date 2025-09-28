@@ -3,23 +3,42 @@ workflows:
     name: Android MVP
     environment:
       flutter: stable
+      # If your env var lives inside a Codemagic "group", uncomment and put the group name below:
+      # groups:
+      #   - firebase_secrets
 
     scripts:
       - name: Install dependencies
         script: flutter pub get
 
-      - name: Provide google-services.json (from env var)
+      - name: Restore google-services.json (robust Python decode + verify)
         script: |
           set -e
-          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
-            mkdir -p android/app
-            echo "$GOOGLE_SERVICES_JSON_B64" | base64 --decode > android/app/google-services.json
-            echo "✅ Restored android/app/google-services.json"
-            head -n 3 android/app/google-services.json || true
-          else
+          if [ -z "${GOOGLE_SERVICES_JSON_B64:-}" ]; then
             echo "❌ GOOGLE_SERVICES_JSON_B64 not set in Codemagic Environment variables"
             exit 1
           fi
+          mkdir -p android/app
+          python3 - <<'PY'
+import os, base64, sys, pathlib, json
+b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64","")
+try:
+    data = base64.b64decode(b64, validate=True)
+except Exception as e:
+    print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
+pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
+with open("android/app/google-services.json","wb") as f:
+    f.write(data)
+print("[OK] wrote android/app/google-services.json (", len(data), "bytes )")
+# quick JSON sanity (won't print secrets)
+try:
+    j = json.loads(data.decode("utf-8"))
+    print("[OK] parsed JSON with keys:", list(j.keys())[:3])
+except Exception as e:
+    print("[WARN] JSON parse failed:", e)
+PY
+          echo "Preview:"
+          head -n 3 android/app/google-services.json || true
 
       - name: Generate firebase_options.dart
         script: |
