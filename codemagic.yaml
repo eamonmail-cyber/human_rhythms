@@ -20,23 +20,23 @@ workflows:
           fi
           mkdir -p android/app
           python3 - <<'PY'
-import os, base64, sys, pathlib, json
-b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64","")
-try:
-    data = base64.b64decode(b64, validate=True)
-except Exception as e:
-    print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
-pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
-with open("android/app/google-services.json","wb") as f:
-    f.write(data)
-print("[OK] wrote android/app/google-services.json (", len(data), "bytes )")
-# quick JSON sanity (won't print secrets)
-try:
-    j = json.loads(data.decode("utf-8"))
-    print("[OK] parsed JSON with keys:", list(j.keys())[:3])
-except Exception as e:
-    print("[WARN] JSON parse failed:", e)
-PY
+     import os, base64, sys, pathlib, json
+     b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64","")
+     try:
+     data = base64.b64decode(b64, validate=True)
+     except Exception as e:
+      print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
+      pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
+      with open("android/app/google-services.json","wb") as f:
+     f.write(data)
+      print("[OK] wrote android/app/google-services.json (", len(data), "bytes )")
+      # quick JSON sanity (won't print secrets)
+     try:
+     j = json.loads(data.decode("utf-8"))
+     print("[OK] parsed JSON with keys:", list(j.keys())[:3])
+     except Exception as e:
+     print("[WARN] JSON parse failed:", e)
+      PY
           echo "Preview:"
           head -n 3 android/app/google-services.json || true
 
