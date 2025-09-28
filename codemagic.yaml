@@ -3,46 +3,54 @@ workflows:
     name: Android MVP
     environment:
       flutter: stable
-      # If your env var lives inside a Codemagic "group", uncomment and put the group name below:
-      # groups:
-      #   - firebase_secrets
 
     scripts:
-      - name: Install dependencies
-        script: flutter pub get
-
-      - name: Restore google-services.json (robust Python decode + verify)
+      - name: Ensure Android project + pub get
         script: |
-          set -e
-          if [ -z "${GOOGLE_SERVICES_JSON_B64:-}" ]; then
-            echo "❌ GOOGLE_SERVICES_JSON_B64 not set in Codemagic Environment variables"
-            exit 1
+          set -euo pipefail
+          flutter --version
+          if [ ! -d android ]; then
+            flutter create --platforms=android --template=app .
           fi
+          flutter pub get
+
+      - name: Check env var presence
+        script: |
+          set -euo pipefail
+          if [ -n "${GOOGLE_SERVICES_JSON_B64:-}" ]; then
+            echo "✅ Detected GOOGLE_SERVICES_JSON_B64 (length: ${#GOOGLE_SERVICES_JSON_B64})"
+          else
+            echo "❌ GOOGLE_SERVICES_JSON_B64 is empty or not set in Codemagic" && exit 1
+          fi
+
+      - name: Restore android/app/google-services.json (robust Python decode)
+        script: |
+          set -euo pipefail
           mkdir -p android/app
           python3 - <<'PY'
-     import os, base64, sys, pathlib, json
-     b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64","")
-     try:
-     data = base64.b64decode(b64, validate=True)
-     except Exception as e:
-      print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
-      pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
-      with open("android/app/google-services.json","wb") as f:
-     f.write(data)
-      print("[OK] wrote android/app/google-services.json (", len(data), "bytes )")
-      # quick JSON sanity (won't print secrets)
-     try:
-     j = json.loads(data.decode("utf-8"))
-     print("[OK] parsed JSON with keys:", list(j.keys())[:3])
-     except Exception as e:
-     print("[WARN] JSON parse failed:", e)
-      PY
-          echo "Preview:"
+import os, base64, json, sys, pathlib
+b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64", "")
+try:
+    data = base64.b64decode(b64, validate=True)
+except Exception as e:
+    print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
+pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
+with open("android/app/google-services.json", "wb") as f:
+    f.write(data)
+# sanity check
+try:
+    j = json.loads(data.decode("utf-8"))
+    print("[OK] Parsed google-services.json; top-level keys:", list(j.keys())[:3])
+except Exception as e:
+    print("[WARN] JSON parse failed:", e)
+PY
+          echo "Preview (first 3 lines):"
           head -n 3 android/app/google-services.json || true
 
-      - name: Generate firebase_options.dart
+      - name: Generate firebase_options.dart (via script file)
         script: |
-          set -e
+          set -euo pipefail
+          test -f scripts/gen_firebase_options.py || (echo "❌ scripts/gen_firebase_options.py missing" && exit 1)
           python3 scripts/gen_firebase_options.py
           test -f lib/main/script/firebase_options.dart || (echo "❌ lib/main/script/firebase_options.dart not generated" && exit 1)
           echo "✅ Generated lib/main/script/firebase_options.dart"
@@ -50,7 +58,7 @@ workflows:
 
       - name: Build Debug APK
         script: |
-          set -e
+          set -euo pipefail
           flutter clean
           flutter build apk --debug
 
