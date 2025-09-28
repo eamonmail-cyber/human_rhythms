@@ -5,52 +5,23 @@ workflows:
       flutter: stable
 
     scripts:
-      - name: Ensure Android project + pub get
+      - name: Ensure Android scaffold + pub get
         script: |
           set -euo pipefail
           flutter --version
-          if [ ! -d android ]; then
-            flutter create --platforms=android --template=app .
-          fi
+          [ -d android ] || flutter create --platforms=android --template=app .
           flutter pub get
 
-      - name: Check env var presence
+      - name: Restore google-services.json from env var (robust)
         script: |
           set -euo pipefail
-          if [ -n "${GOOGLE_SERVICES_JSON_B64:-}" ]; then
-            echo "✅ Detected GOOGLE_SERVICES_JSON_B64 (length: ${#GOOGLE_SERVICES_JSON_B64})"
-          else
-            echo "❌ GOOGLE_SERVICES_JSON_B64 is empty or not set in Codemagic" && exit 1
-          fi
-
-      - name: Restore android/app/google-services.json (robust Python decode)
-        script: |
-          set -euo pipefail
-          mkdir -p android/app
-          python3 - <<'PY'
-import os, base64, json, sys, pathlib
-b64 = os.environ.get("GOOGLE_SERVICES_JSON_B64", "")
-try:
-    data = base64.b64decode(b64, validate=True)
-except Exception as e:
-    print(f"[ERROR] base64 decode failed: {e}", file=sys.stderr); sys.exit(2)
-pathlib.Path("android/app").mkdir(parents=True, exist_ok=True)
-with open("android/app/google-services.json", "wb") as f:
-    f.write(data)
-# sanity check
-try:
-    j = json.loads(data.decode("utf-8"))
-    print("[OK] Parsed google-services.json; top-level keys:", list(j.keys())[:3])
-except Exception as e:
-    print("[WARN] JSON parse failed:", e)
-PY
+          python3 scripts/restore_google_services.py
           echo "Preview (first 3 lines):"
           head -n 3 android/app/google-services.json || true
 
-      - name: Generate firebase_options.dart (via script file)
+      - name: Generate firebase_options.dart
         script: |
           set -euo pipefail
-          test -f scripts/gen_firebase_options.py || (echo "❌ scripts/gen_firebase_options.py missing" && exit 1)
           python3 scripts/gen_firebase_options.py
           test -f lib/main/script/firebase_options.dart || (echo "❌ lib/main/script/firebase_options.dart not generated" && exit 1)
           echo "✅ Generated lib/main/script/firebase_options.dart"
