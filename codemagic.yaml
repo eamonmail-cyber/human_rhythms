@@ -4,7 +4,10 @@ workflows:
     environment:
       flutter: stable
       groups:
-        - firebase   # exposes GOOGLE_SERVICES_JSON_B64 from your “firebase” group
+        - firebase              # exposes GOOGLE_SERVICES_JSON_B64
+      vars:
+        JAVA_TOOL_OPTIONS: "-Xmx3g"
+        GRADLE_OPTS: "-Xmx3g"
 
     scripts:
       - name: Ensure Android scaffold + pub get
@@ -37,6 +40,20 @@ workflows:
           test -f lib/main/script/firebase_options.dart || (echo "❌ lib/main/script/firebase_options.dart not generated" && exit 1)
           echo "✅ Generated lib/main/script/firebase_options.dart"
           head -n 12 lib/main/script/firebase_options.dart || true
+
+      - name: Put gradle.properties (heap + androidX)
+        script: |
+          set -euo pipefail
+          mkdir -p android
+          cat > android/gradle.properties <<'PROPS'
+org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
+kotlin.daemon.jvmargs=-Xmx2048m
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.workers.max=2
+org.gradle.daemon=false
+PROPS
+          echo "✅ Wrote android/gradle.properties"
 
       - name: Build Debug APK
         script: |
