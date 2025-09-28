@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
 restore_google_services.py
-Reads base64 from env var GOOGLE_SERVICES_JSON_B64 and writes:
-android/app/google-services.json
+Reads base64 from env var GOOGLE_SERVICES_JSON_B64 (Codemagic group: firebase)
+and writes: android/app/google-services.json
 """
-
 import os, sys, base64, json, pathlib
 
 ENV_NAME = "GOOGLE_SERVICES_JSON_B64"
@@ -13,7 +12,7 @@ OUT_PATH = "android/app/google-services.json"
 def main():
     b64 = os.environ.get(ENV_NAME, "")
     if not b64:
-        print(f"❌ {ENV_NAME} is not set in Codemagic Environment variables", file=sys.stderr)
+        print(f"❌ {ENV_NAME} is not set/visible to this workflow.", file=sys.stderr)
         sys.exit(1)
 
     try:
