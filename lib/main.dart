@@ -78,8 +78,10 @@ class FirestoreDemo extends StatefulWidget {
 }
 
 class _FirestoreDemoState extends State<FirestoreDemo> {
-  final _controller = TextEditingController();
+  final _controller = TextFieldController();
   final _messages = <String>[];
+
+  TextEditingController TextFieldController() => TextEditingController();
 
   Future<void> _saveMessage() async {
     final text = _controller.text.trim();
