@@ -8,7 +8,6 @@ workflows:
       vars:
         JAVA_TOOL_OPTIONS: "-Xmx3g"
         GRADLE_OPTS: "-Xmx3g"
-
     scripts:
       - name: Ensure Android scaffold + pub get
         script: |
@@ -16,7 +15,6 @@ workflows:
           flutter --version
           [ -d android ] || flutter create --platforms=android --template=app .
           flutter pub get
-
       - name: Check env var presence (length only)
         script: |
           set -euo pipefail
@@ -25,14 +23,12 @@ workflows:
           else
             echo "❌ GOOGLE_SERVICES_JSON_B64 missing (check Codemagic > Environment variables, group 'firebase')" && exit 1
           fi
-
       - name: Restore google-services.json from env var (robust)
         script: |
           set -euo pipefail
           python3 scripts/restore_google_services.py
           echo "Preview (first 3 lines):"
           head -n 3 android/app/google-services.json || true
-
       - name: Generate firebase_options.dart
         script: |
           set -euo pipefail
@@ -40,28 +36,22 @@ workflows:
           test -f lib/main/script/firebase_options.dart || (echo "❌ lib/main/script/firebase_options.dart not generated" && exit 1)
           echo "✅ Generated lib/main/script/firebase_options.dart"
           head -n 12 lib/main/script/firebase_options.dart || true
-
       - name: Put gradle.properties (heap + androidX)
         script: |
           set -euo pipefail
           mkdir -p android
           cat > android/gradle.properties <<'PROPS'
-Environment:
-  vars:
-  ORG_GRADLE_JVMARGS: "Xmx4096m -Dfile.encoding=UTF-8"
-  KOTLIN_DAEMON_JVMARGS: "-Xmx2048m"
-  android.useAndroidX=true
-  android.enableJetifier=true
-  org.gradle.workers.max=2
-  org.gradle.daemon=false
-  PROPS
+          org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
+          org.gradle.daemon=false
+          org.gradle.workers.max=2
+          android.useAndroidX=true
+          android.enableJetifier=true
+          PROPS
           echo "✅ Wrote android/gradle.properties"
-
       - name: Build Debug APK
         script: |
           set -euo pipefail
           flutter clean
           flutter build apk --debug
-
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
