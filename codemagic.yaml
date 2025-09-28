@@ -50,11 +50,11 @@ Environment:
   vars:
   ORG_GRADLE_JVMARGS: "Xmx4096m -Dfile.encoding=UTF-8"
   KOTLIN_DAEMON_JVMARGS: "-Xmx2048m"
-android.useAndroidX=true
-android.enableJetifier=true
-org.gradle.workers.max=2
-org.gradle.daemon=false
-PROPS
+  android.useAndroidX=true
+  android.enableJetifier=true
+  org.gradle.workers.max=2
+  org.gradle.daemon=false
+  PROPS
           echo "✅ Wrote android/gradle.properties"
 
       - name: Build Debug APK
