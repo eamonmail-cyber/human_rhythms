@@ -78,18 +78,18 @@ class FirestoreDemo extends StatefulWidget {
 }
 
 class _FirestoreDemoState extends State<FirestoreDemo> {
-  late final TextEditingController _controller;   // <-- declare here
+  late final TextEditingController _controller;
   final _messages = <String>[];
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();        // <-- initialize in initState
+    _controller = TextEditingController();
   }
 
   @override
   void dispose() {
-    _controller.dispose();                        // <-- dispose to avoid leaks
+    _controller.dispose();
     super.dispose();
   }
 
