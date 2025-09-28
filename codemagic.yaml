@@ -3,6 +3,8 @@ workflows:
     name: Android MVP
     environment:
       flutter: stable
+      groups:
+        - firebase   # exposes GOOGLE_SERVICES_JSON_B64 from your “firebase” group
 
     scripts:
       - name: Ensure Android scaffold + pub get
@@ -11,6 +13,15 @@ workflows:
           flutter --version
           [ -d android ] || flutter create --platforms=android --template=app .
           flutter pub get
+
+      - name: Check env var presence (length only)
+        script: |
+          set -euo pipefail
+          if [ -n "${GOOGLE_SERVICES_JSON_B64:-}" ]; then
+            echo "GOOGLE_SERVICES_JSON_B64 length: ${#GOOGLE_SERVICES_JSON_B64}"
+          else
+            echo "❌ GOOGLE_SERVICES_JSON_B64 missing (check Codemagic > Environment variables, group 'firebase')" && exit 1
+          fi
 
       - name: Restore google-services.json from env var (robust)
         script: |
