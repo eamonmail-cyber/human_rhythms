@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "973113800356",
+    "project_id": "trailer--setup",
+    "storage_bucket": "trailer--setup.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973113800356:android:86e0239dc260896bfc1831",
+        "android_client_info": {
+          "package_name": "com.humanrhythms.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9mNGzOqNIMjkINgDSJADDEHDXkp-bzBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
