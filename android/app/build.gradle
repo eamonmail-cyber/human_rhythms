@@ -1,1 +1,36 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+    id 'kotlin-android'
+}
+
+android {
+    namespace "com.example.human_rhythms"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.human_rhythms"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'com.google.firebase:firebase-analytics:21.6.1'
+    implementation 'com.google.firebase:firebase-firestore:25.0.0'
+}
 
