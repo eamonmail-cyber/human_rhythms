@@ -1,15 +1,30 @@
-plugins {
-    id 'com.android.application'
-    id 'com.google.gms.google-services'
-    id 'kotlin-android'
+// Read local.properties for flutter.sdk path (set by Codemagic / flutter CLI)
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
 }
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException(
+        "Flutter SDK not found. Set flutter.sdk in android/local.properties.")
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'kotlin-android'
+// This is the critical line that bundles the Dart VM + compiled Dart code into the APK.
+// Without it the APK is a native-only shell and shows a white screen.
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
     namespace "com.example.human_rhythms"
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.human_rhythms"
+        // Must match the package_name registered in Firebase (google-services.json)
+        applicationId "com.humanrhythms.app"
         minSdk 21
         targetSdk 34
         versionCode 1
@@ -20,7 +35,9 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                         'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
         debug {
             minifyEnabled false
@@ -28,9 +45,13 @@ android {
     }
 }
 
+// Required by flutter.gradle – tells it where the Flutter project root is
+flutter {
+    source '../..'
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation 'com.google.firebase:firebase-analytics:21.6.1'
     implementation 'com.google.firebase:firebase-firestore:25.0.0'
 }
-
