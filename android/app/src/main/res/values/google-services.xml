@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Manually committed Firebase resource values so firebase_core 5.x
+     optionsFromResource() always finds google_app_id at runtime,
+     even before the google-services Gradle plugin runs (e.g. Appetize test APK). -->
+<resources>
+    <string name="google_app_id" translatable="false">1:973113800356:android:86e0239dc260896bfc1831</string>
+    <string name="gcm_defaultSenderId" translatable="false">973113800356</string>
+    <string name="google_api_key" translatable="false">AIzaSyD9mNGzOqNIMjkINgDSJADDEHDXkp-bzBY</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyD9mNGzOqNIMjkINgDSJADDEHDXkp-bzBY</string>
+    <string name="google_storage_bucket" translatable="false">trailer--setup.firebasestorage.app</string>
+    <string name="project_id" translatable="false">trailer--setup</string>
+    <string name="default_web_client_id" translatable="false"></string>
+    <string name="firebase_database_url" translatable="false"></string>
+</resources>
