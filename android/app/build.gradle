@@ -12,7 +12,6 @@ if (flutterRoot == null) {
 }
 
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
 apply plugin: 'kotlin-android'
 // This is the critical line that bundles the Dart VM + compiled Dart code into the APK.
 // Without it the APK is a native-only shell and shows a white screen.
@@ -55,3 +54,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics:21.6.1'
     implementation 'com.google.firebase:firebase-firestore:25.0.0'
 }
+
+// google-services plugin MUST be applied last so it can process all
+// Firebase dependencies and generate the correct resource strings
+// (google_app_id etc.) from google-services.json.
+apply plugin: 'com.google.gms.google-services'
