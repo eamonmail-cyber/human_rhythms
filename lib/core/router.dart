@@ -13,6 +13,7 @@ import '../features/routines/routine_list_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/ai_assistant/ai_assistant_screen.dart';
+import '../features/insights/insights_screen.dart';
 
 /// Listenable wrapper so GoRouter refreshes when auth state changes.
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -43,6 +44,7 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/routines',builder: (c, s) => const AuthGate(child: RoutineListScreen())),
     GoRoute(path: '/settings', builder: (c, s) => const AuthGate(child: SettingsScreen())),
     GoRoute(path: '/assistant',builder: (c, s) => const AuthGate(child: AiAssistantScreen())),
+    GoRoute(path: '/insights', builder: (c, s) => const AuthGate(child: InsightsScreen())),
     GoRoute(path: '/signin',   builder: (c, s) => const SignInScreen()),
   ],
 );

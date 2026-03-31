@@ -10,7 +10,7 @@ class AppScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: [
-        IconButton(onPressed: ()=> context.go('/summary'), icon: const Icon(Icons.insights)),
+        IconButton(onPressed: ()=> context.go('/insights'), icon: const Icon(Icons.insights)),
         IconButton(onPressed: ()=> context.go('/routines'), icon: const Icon(Icons.list)),
         IconButton(onPressed: ()=> context.go('/settings'), icon: const Icon(Icons.settings)),
       ]),
