@@ -24,13 +24,13 @@ class ClaudeException implements Exception {
 
 /// Service that wraps the Anthropic Messages API.
 ///
-/// The API key is read from the `CLAUDE_API_KEY` dart-define at build time:
-///   flutter run --dart-define=CLAUDE_API_KEY=sk-ant-...
+/// The API key is read from the `ANTHROPIC_API_KEY` dart-define at build time:
+///   flutter run --dart-define=ANTHROPIC_API_KEY=sk-ant-...
 ///
-/// For CI (Codemagic), add CLAUDE_API_KEY as a secret env var and pass it
-/// via `--dart-define` in the build arguments.
+/// For CI (Codemagic), store ANTHROPIC_API_KEY in the 'anthropic' env group
+/// and pass it via --dart-define in the build script (see codemagic.yaml).
 class ClaudeService {
-  static const _apiKey = String.fromEnvironment('CLAUDE_API_KEY');
+  static const _apiKey = String.fromEnvironment('ANTHROPIC_API_KEY');
   static const _endpoint = 'https://api.anthropic.com/v1/messages';
   static const _model = 'claude-sonnet-4-6';
   static const _maxTokens = 1024;
@@ -52,7 +52,7 @@ class ClaudeService {
     if (_apiKey.isEmpty) {
       throw const ClaudeException(
         'API key not configured. '
-        'Rebuild with --dart-define=CLAUDE_API_KEY=<your-key>.',
+        'Rebuild with --dart-define=ANTHROPIC_API_KEY=<your-key>.',
       );
     }
 
