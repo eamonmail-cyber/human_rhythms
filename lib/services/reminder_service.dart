@@ -196,6 +196,27 @@ class ReminderService {
   static Future<void> cancelRoutineReminder(int index) =>
       _plugin.cancel(_routineBase + index);
 
+  // ── Test notification ─────────────────────────────────────────────────────
+
+  static Future<void> sendTestNotification() async {
+    await _plugin.show(
+      9999,
+      'Human Rhythms',
+      'Notifications are working correctly.',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+          vibrationPattern: Int64List.fromList([0, 250]),
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+    );
+  }
+
   // ── Schedule-mode resolver ────────────────────────────────────────────────
   //
   // exactAllowWhileIdle works on all API levels (21+). The SCHEDULE_EXACT_ALARM

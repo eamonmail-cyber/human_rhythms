@@ -248,6 +248,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }
                     },
                   ),
+                  const Divider(height: 1, indent: 16),
+                  // Test notification button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          await ReminderService.sendTestNotification();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Test notification sent'),
+                                backgroundColor: kPrimary,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('[Reminders] test notification error: $e');
+                          _showReminderError(e);
+                        }
+                      },
+                      icon: const Icon(Icons.notifications_active_outlined,
+                          size: 18),
+                      label: const Text('Send test notification'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: kPrimary,
+                        side: const BorderSide(color: kPrimary),
+                        minimumSize: const Size(double.infinity, 40),
+                      ),
+                    ),
+                  ),
                 ],
               ],
             ),
