@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/theme.dart';
 import '../features/auth/sign_in_screen.dart';
+import '../features/community/community_screen.dart';
 import '../features/diary/diary_screen.dart';
-import '../features/summary/weekly_summary_screen.dart';
+import '../features/library/library_screen.dart';
 import '../features/routines/routine_list_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/stories/stories_screen.dart';
+import '../features/summary/weekly_summary_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _sub;
@@ -38,9 +41,12 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/loading',  builder: (c, s) => const _LoadingScreen()),
     GoRoute(path: '/signin',   builder: (c, s) => const SignInScreen()),
     GoRoute(path: '/',         builder: (c, s) => const DiaryScreen()),
-    GoRoute(path: '/routines', builder: (c, s) => const RoutineListScreen()),
-    GoRoute(path: '/summary',  builder: (c, s) => const WeeklySummaryScreen()),
-    GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
+    GoRoute(path: '/routines',  builder: (c, s) => const RoutineListScreen()),
+    GoRoute(path: '/library',   builder: (c, s) => const LibraryScreen()),
+    GoRoute(path: '/stories',   builder: (c, s) => const StoriesScreen()),
+    GoRoute(path: '/community', builder: (c, s) => const CommunityScreen()),
+    GoRoute(path: '/summary',   builder: (c, s) => const WeeklySummaryScreen()),
+    GoRoute(path: '/settings',  builder: (c, s) => const SettingsScreen()),
   ],
 );
 
