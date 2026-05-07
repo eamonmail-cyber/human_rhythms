@@ -1,0 +1,18 @@
+IMPORTANT — Before building:
+
+Place your google-services.json file in THIS folder:
+  android/app/google-services.json
+
+To get it:
+1. Go to console.firebase.google.com
+2. Open your project
+3. Click the gear icon → Project Settings
+4. Under "Your apps" → Android app
+5. If no Android app exists, click "Add app"
+   - Package name: com.humanrhythms.app
+   - App nickname: Human Rhythms
+6. Download google-services.json
+7. Place it here (android/app/)
+
+Then in Codemagic, add google-services.json as an Environment File Variable
+so it's never committed to GitHub.

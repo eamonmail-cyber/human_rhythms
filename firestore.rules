@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isSignedIn()      { return request.auth != null; }
+    function isOwner(uid)      { return isSignedIn() && request.auth.uid == uid; }
+    function isValidString(s)  { return s is string && s.size() > 0 && s.size() < 500; }
+    function hasUserId()       { return request.resource.data.keys().hasAll(['userId']); }
+    function ownsWrite()       { return isOwner(request.resource.data.userId); }
+
+    // ── User profiles ─────────────────────────────────────────────────────────
+    // Each user can only read/write their own profile document
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Routines ──────────────────────────────────────────────────────────────
+    // Private routines: only owner can read/write
+    // Public routines (isPublic == true): anyone signed-in can read
+    match /routines/{docId} {
+      allow create: if ownsWrite() && hasUserId();
+      allow read:   if isOwner(resource.data.userId)
+                    || (isSignedIn() && resource.data.isPublic == true);
+      allow update: if isOwner(resource.data.userId) && ownsWrite();
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ── Diary Entries (private — never public) ────────────────────────────────
+    match /entries/{docId} {
+      allow create: if ownsWrite() && hasUserId();
+      allow read, update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ── Daily Outcomes (mood, energy etc — private) ───────────────────────────
+    match /outcomes/{docId} {
+      allow create: if ownsWrite() && hasUserId();
+      allow read, update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ── Badges (private) ──────────────────────────────────────────────────────
+    match /badges/{docId} {
+      allow create: if ownsWrite() && hasUserId();
+      allow read, update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ── Community library (public routine templates) ──────────────────────────
+    // Anyone signed in can READ public templates
+    // Only authenticated users can CREATE — but only their own
+    // No direct deletes from client (soft-delete via active flag)
+    match /library_routines/{docId} {
+      allow read:   if isSignedIn();
+      allow create: if ownsWrite() && hasUserId()
+                    && request.resource.data.isPublic == true;
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if false; // soft-delete only via active flag
+    }
+
+    // ── Block everything else ─────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,73 @@
+workflows:
+  android-release:
+    name: Human Rhythms - Android
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.41.5
+      java: 17
+
+    scripts:
+      - name: Write google-services.json
+        script: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo "google-services.json written - project:"
+          python3 -c "import json,sys; d=json.load(open('android/app/google-services.json')); print(d['project_info']['project_id'])"
+
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Analyze code
+        script: flutter analyze --no-fatal-infos || true
+
+      - name: Build APK
+        script: flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+
+    publishing:
+      email:
+        recipients:
+          - eamonmail@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  ios-release:
+    name: Human Rhythms - iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.41.5
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Write GoogleService-Info.plist
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
+          echo "GoogleService-Info.plist written"
+
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Install pods
+        script: |
+          cd ios && pod install && cd ..
+
+      - name: Build iOS IPA
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - eamonmail@gmail.com
+        notify:
+          success: true
+          failure: true

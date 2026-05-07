@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Eamon\\\\AppData\\\\Local\\\\Pub\\\\Cache\" -ErrorAction SilentlyContinue | Select-Object Name -First 5; [System.Environment]::GetEnvironmentVariable\\(\"FLUTTER_ROOT\", \"User\"\\); [System.Environment]::GetEnvironmentVariable\\(\"FLUTTER_ROOT\", \"Machine\"\\))",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}
