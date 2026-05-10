@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // \"\"'); if echo \"$cmd\" | grep -qE '^git push'; then if ! flutter analyze 2>&1; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"flutter analyze failed — fix all issues before pushing\"}}'; fi; fi",
+            "timeout": 120,
+            "statusMessage": "Running flutter analyze before push..."
+          }
+        ]
+      }
+    ]
+  }
+}
